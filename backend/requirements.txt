@@ -1,0 +1,46 @@
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy[asyncio]==2.0.23
+asyncpg==0.29.0
+alembic==1.12.1
+psycopg2-binary==2.9.9
+
+# Validation
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# Scraping
+playwright==1.40.0
+
+# Celery for async tasks
+celery[redis]==5.3.4
+redis>=4.5.2,<5.0.0
+
+# Utilities
+python-dotenv==1.0.0
+httpx==0.25.2
+
+# LangChain and LangGraph for multi-agent system
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langgraph>=0.0.20
+langsmith>=0.0.77
+openai>=1.6.0
+
+# For async event loop in scraper
+nest-asyncio>=1.5.8
+
+# Scheduling
+apscheduler>=3.10.4
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Linting
+flake8==6.1.0
+black==23.11.0

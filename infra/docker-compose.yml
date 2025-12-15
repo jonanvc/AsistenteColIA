@@ -1,0 +1,122 @@
+# Docker Compose for Proyecto Final IA
+# Services: PostgreSQL, Redis, Backend (FastAPI), Worker (Celery), Frontend (Vue.js)
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: proyecto_ia_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-proyecto_ia}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Celery broker
+  redis:
+    image: redis:7-alpine
+    container_name: proyecto_ia_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend with Multi-Agent System
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: proyecto_ia_backend
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-proyecto_ia}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DEBUG: ${DEBUG:-false}
+      # OpenAI and LangChain
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      # LangSmith Tracing
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-true}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
+      LANGSMITH_PROJECT_NAME: ${LANGSMITH_PROJECT_NAME:-association-agents}
+      LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-https://eu.api.smith.langchain.com}
+      # Scheduler
+      ENABLE_SCHEDULER: ${ENABLE_SCHEDULER:-true}
+    # volumes:
+    #   - ../backend:/app  # Uncomment for development with hot reload
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker
+  worker:
+    build:
+      context: ..
+      dockerfile: worker/Dockerfile
+    container_name: proyecto_ia_worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-proyecto_ia}
+      REDIS_URL: redis://redis:6379/0
+    # volumes:
+    #   - ../backend/app:/app/app
+    #   - ../worker:/app/worker
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Vue.js Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: proyecto_ia_frontend
+    restart: unless-stopped
+    environment:
+      # Use Vite proxy - requests to /api are proxied to backend:8000/api
+      VITE_API_URL: /api
+    # volumes:
+    #   - ../frontend:/app
+    #   - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: proyecto_ia_network

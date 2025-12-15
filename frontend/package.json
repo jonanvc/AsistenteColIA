@@ -1,0 +1,35 @@
+{
+  "name": "proyecto-final-ia-frontend",
+  "version": "1.0.0",
+  "description": "Frontend Vue.js para Proyecto Final IA",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5",
+    "pinia": "^2.1.7",
+    "axios": "^1.6.2",
+    "d3": "^7.8.5",
+    "ol": "^8.2.0",
+    "plotly.js-dist-min": "^2.27.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
+    "marked": "^11.1.0",
+    "mermaid": "^10.6.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.5.2",
+    "vite": "^5.0.8",
+    "eslint": "^8.55.0",
+    "eslint-plugin-vue": "^9.19.2",
+    "prettier": "^3.1.1",
+    "@vue/eslint-config-prettier": "^8.0.0"
+  }
+}
