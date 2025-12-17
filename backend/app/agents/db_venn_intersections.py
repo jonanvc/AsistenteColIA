@@ -607,3 +607,138 @@ def calculate_intersection_result(intersection_id: int, organization_id: int) ->
         return {"success": False, "error": "Legacy mode not supported in this version"}
     finally:
         session.close()
+
+
+# ============================================================================
+# HIGH-LEVEL FUNCTIONS FOR CHAT AGENT
+# ============================================================================
+
+def create_intersection_from_text(
+    name: str,
+    expression_text: str = None,
+    include_proxies: List[str] = None,
+    operation: str = "intersection",
+    user_input: str = ""
+) -> Dict[str, Any]:
+    """
+    High-level function to create a Venn intersection from user text.
+    Handles parsing, validation, and creation in one call.
+    
+    Args:
+        name: Intersection name
+        expression_text: Logic expression like '"A" AND "B"' or '"A" OR ("B" AND "C")'
+        include_proxies: Simple list of proxy texts for non-expression mode
+        operation: 'intersection' (AND) or 'union' (OR) for simple mode
+        user_input: Original user input for fallback extraction
+    
+    Returns:
+        Dict with success status, created intersection info, or error
+    """
+    session = get_sync_db_session()
+    try:
+        parsed_expr = None
+        unknowns = []
+        
+        # Try to extract expression from user_input if not provided
+        if not expression_text and user_input:
+            # Look for patterns like: expresión: "A" AND "B"
+            patterns = [
+                r'expresi[oó]n[:\s]+(.+?)(?:$|\n)',
+                r'con expresi[oó]n[:\s]+(.+?)(?:$|\n)',
+                r':\s*(["\(].+)$',
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, user_input, re.IGNORECASE)
+                if match:
+                    expression_text = match.group(1).strip()
+                    break
+        
+        # Parse logic expression if provided
+        if expression_text:
+            parsed_expr = parse_logic_expression_text(expression_text, session)
+            matched = parsed_expr.pop('matched_proxies', [])
+            
+            # Check for unknown proxies
+            def find_unknown(node):
+                result = []
+                if node.get('type') == 'unknown':
+                    result.append(node.get('text', '?'))
+                for child in node.get('children', []):
+                    result.extend(find_unknown(child))
+                return result
+            
+            unknowns = find_unknown(parsed_expr)
+            if unknowns:
+                return {
+                    "success": False,
+                    "error": f"Proxies no encontrados: {', '.join(unknowns[:5])}",
+                    "unknowns": unknowns
+                }
+        
+        # Create intersection
+        if parsed_expr or include_proxies:
+            result = create_venn_intersection(
+                name=name,
+                operation=operation,
+                include_proxies=include_proxies if include_proxies else None,
+                logic_expression=parsed_expr
+            )
+            return result
+        else:
+            return {
+                "success": False,
+                "error": "Se requiere expresión lógica o lista de proxies"
+            }
+    
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        session.close()
+
+
+def format_intersections_list(result: Dict[str, Any]) -> str:
+    """Format the intersections list for chat response."""
+    if not result.get("success"):
+        return f"❌ Error: {result.get('error', 'Unknown error')}"
+    
+    if not result.get("intersections"):
+        return "📭 No hay intersecciones configuradas."
+    
+    response = f"🔷 **{result['total']} intersecciones:**\n\n"
+    for inter in result["intersections"]:
+        response += f"**{inter['name']}** (ID: {inter['id']})\n"
+        if inter.get('use_logic_expression'):
+            response += f"  🧮 Expresión: `{inter.get('expression_display', 'N/A')}`\n"
+        elif inter.get('include_proxies'):
+            op = inter.get('operation', 'intersection')
+            response += f"  📝 {len(inter['include_proxies'])} proxies ({op})\n"
+        response += "\n"
+    
+    return response
+
+
+def format_intersection_created(result: Dict[str, Any]) -> str:
+    """Format the intersection creation result for chat response."""
+    if not result.get("success"):
+        return f"❌ Error: {result.get('error', 'Unknown error')}"
+    
+    response = f"✅ Intersección **{result['created']}** creada.\n"
+    response += f"- Modo: {result['mode']}\n"
+    if result.get('expression_display'):
+        response += f"- Expresión: `{result['expression_display']}`\n"
+    
+    return response
+
+
+def format_intersection_deleted(result: Dict[str, Any]) -> str:
+    """Format the intersection deletion result for chat response."""
+    if not result.get("success"):
+        return f"❌ Error: {result.get('error', 'Unknown error')}"
+    return f"🗑️ Intersección **{result['deleted']}** eliminada."
+
+
+def format_intersection_updated(result: Dict[str, Any]) -> str:
+    """Format the intersection update result for chat response."""
+    if not result.get("success"):
+        return f"❌ Error: {result.get('error', 'Unknown error')}"
+    return f"✅ Intersección **{result['updated']}** actualizada."

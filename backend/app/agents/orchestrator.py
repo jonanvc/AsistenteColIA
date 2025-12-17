@@ -40,6 +40,7 @@ AGENTES DISPONIBLES:
    - EDITAR o ELIMINAR organizaciones existentes
    - Operaciones con MÚLTIPLES organizaciones a la vez
    - Operaciones con variables Venn (crear, editar, eliminar variables y proxies)
+   - Operaciones con INTERSECCIONES Venn (crear, listar, eliminar intersecciones)
    
    ✅ USA db_query cuando el usuario dice:
    - "Crea estas organizaciones: X, Y, Z"
@@ -47,8 +48,10 @@ AGENTES DISPONIBLES:
    - "Elimina las organizaciones X e Y"
    - "Actualiza X, Y y Z con..."
    - "Crea las variables Venn: A, B, C"
+   - "Lista las intersecciones Venn"
+   - "Crea intersección: A AND (B OR C)"
    
-   Palabras clave: "tenemos", "registrada", "existe", "crea", "registra", "elimina", "actualiza", "añade", "en el sistema", "en la base de datos", "variable venn", "proxy"
+   Palabras clave: "tenemos", "registrada", "existe", "crea", "registra", "elimina", "actualiza", "añade", "en el sistema", "en la base de datos", "variable venn", "proxy", "intersección", "intersecciones"
 
 2. **scraper**: Busca información en la web sobre organizaciones. 
    ⚠️ SOLO úsalo cuando el usuario EXPLÍCITAMENTE pide buscar en internet/web/red:
@@ -80,11 +83,15 @@ AGENTES DISPONIBLES:
    - Se tienen todos los datos necesarios
    - Se necesita presentar resultados al usuario
 
-6. **venn**: Gestiona diagramas Venn y análisis avanzados. Úsalo cuando:
-   - El usuario quiere GENERAR o VISUALIZAR un diagrama Venn
+6. **venn**: SOLO para VISUALIZACIÓN de diagramas Venn. Úsalo ÚNICAMENTE cuando:
+   - El usuario quiere GENERAR o VISUALIZAR un diagrama Venn gráficamente
    - Se quieren ingresar resultados de análisis Venn manualmente
    
-   ⚠️ Para CREAR/EDITAR/ELIMINAR variables Venn y proxies → usa db_query
+   ⚠️ NUNCA uses "venn" para:
+   - Listar intersecciones Venn → usa db_query
+   - Crear/editar/eliminar intersecciones → usa db_query  
+   - Listar/crear/editar variables Venn → usa db_query
+   - Cualquier operación CRUD sobre variables, proxies o intersecciones → usa db_query
 
 CONTEXTO DEL ESTADO ACTUAL:
 {state_context}
@@ -121,10 +128,15 @@ EJEMPLOS:
 - "Actualiza X, Y con alcance regional" → db_query
 - "Crea las variables Venn: Liderazgo, Paz, Territorio" → db_query
 - "Añade proxies a la variable Liderazgo" → db_query
+- "Lista las intersecciones Venn" → db_query (CRUD de intersecciones)
+- "¿Qué intersecciones Venn tenemos?" → db_query (CRUD de intersecciones)
+- "Muestra las intersecciones" → db_query (CRUD de intersecciones)
+- "Crea intersección: A AND (B OR C)" → db_query
+- "Elimina la intersección X" → db_query
 - "Busca en internet información sobre Asmubuli" → scraper (buscar en web)
 - "Encuentra organizaciones de mujeres en Chocó en la web" → scraper (buscar en web)
 - "Lista todas las organizaciones que tenemos" → db_query
-- "Genera el diagrama Venn" → venn
+- "Genera el diagrama Venn gráficamente" → venn (SOLO para visualización gráfica)
 """
 
 
@@ -152,8 +164,8 @@ def build_state_context(state: "AgentState") -> str:
     
     # Check for Venn-related keywords
     user_input_lower = state['user_input'].lower()
-    if any(kw in user_input_lower for kw in ['venn', 'variable', 'proxy', 'proxies', 'resultado']):
-        context_parts.append("NOTA: La consulta parece relacionada con variables Venn o resultados")
+    if any(kw in user_input_lower for kw in ['venn', 'variable', 'proxy', 'proxies', 'resultado', 'intersección', 'intersecciones', 'interseccion']):
+        context_parts.append("NOTA: La consulta parece relacionada con variables Venn, intersecciones o resultados → usar db_query")
     
     # Scraped data status
     if state.get("scraped_data"):

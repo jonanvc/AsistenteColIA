@@ -41,14 +41,17 @@ from .db_venn_variables import (
     get_venn_data,
 )
 from .db_venn_intersections import (
-    parse_logic_expression_text,
-    create_venn_intersection,
     list_venn_intersections,
     delete_venn_intersection,
     update_venn_intersection,
     calculate_intersection_result,
+    # High-level functions for chat
+    create_intersection_from_text,
+    format_intersections_list,
+    format_intersection_created,
+    format_intersection_deleted,
+    format_intersection_updated,
 )
-from ..db.base import get_sync_db_session
 
 # Initialize ChatOpenAI client
 llm = ChatOpenAI(
@@ -80,7 +83,8 @@ OPERACIONES:
 
 3. INTERSECCIONES VENN:
    - list_venn_intersections: Listar todas
-   - create_venn_intersection: Crear con expresión lógica
+   - create_venn_intersection: Crear (intersection_name + logic_expression_text)
+     ⚠️ logic_expression_text DEBE mantener las comillas y operadores: "ProxyA" AND "ProxyB"
    - update_venn_intersection: Actualizar
    - delete_venn_intersection: Eliminar (intersection_name)
    - calculate_intersection: Calcular para organización
@@ -113,6 +117,11 @@ REGLAS:
 - "Muestra variable X" → get_venn_variable (variable_name: "X")
 - "Lista intersecciones" → list_venn_intersections
 - "Crea intersección: A AND (B OR C)" → create_venn_intersection con logic_expression_text
+
+IMPORTANTE para create_venn_intersection:
+- logic_expression_text debe ser la expresión EXACTA con comillas dobles
+- Ejemplo: "\"ProxyA\" AND \"ProxyB\"" o "\"TextoA\" OR (\"TextoB\" AND \"TextoC\")"
+- NUNCA separar los elementos en include_proxies si hay operadores AND/OR
 
 EXPRESIONES LÓGICAS (soporta niveles ilimitados):
 - "A" AND "B"
@@ -322,18 +331,7 @@ def db_agent_node(state: "AgentState") -> "AgentState":
         
         elif action == "list_venn_intersections":
             result = list_venn_intersections()
-            if result["success"] and result["intersections"]:
-                db_response = f"🔷 **{result['total']} intersecciones:**\n\n"
-                for inter in result["intersections"]:
-                    db_response += f"**{inter['name']}** (ID: {inter['id']})\n"
-                    if inter.get('use_logic_expression'):
-                        db_response += f"  🧮 Expresión: `{inter.get('expression_display', 'N/A')}`\n"
-                    elif inter.get('include_proxies'):
-                        op = inter.get('operation', 'intersection')
-                        db_response += f"  📝 {len(inter['include_proxies'])} proxies ({op})\n"
-                    db_response += "\n"
-            else:
-                db_response = "📭 No hay intersecciones configuradas."
+            db_response = format_intersections_list(result)
         
         elif action == "create_venn_intersection":
             inter_name = inter_name or decision.get("intersection_name", f"Intersección {__import__('datetime').datetime.now().strftime('%H%M')}")
@@ -341,67 +339,19 @@ def db_agent_node(state: "AgentState") -> "AgentState":
             include_proxies = decision.get("include_proxies", [])
             logic_expr_text = decision.get("logic_expression_text", "")
             
-            # Check for parentheses in user input as fallback
-            if not logic_expr_text and '(' in user_input:
-                import re
-                # Extract expression from user input
-                patterns = [
-                    r':\s*(.+)',
-                    r'expresi[oó]n[^:]*:\s*(.+)',
-                ]
-                for pattern in patterns:
-                    match = re.search(pattern, user_input, re.IGNORECASE)
-                    if match:
-                        logic_expr_text = match.group(1).strip()
-                        break
-            
-            # Parse logic expression if provided
-            parsed_expr = None
-            if logic_expr_text:
-                session = get_sync_db_session()
-                try:
-                    parsed_expr = parse_logic_expression_text(logic_expr_text, session)
-                    matched = parsed_expr.pop('matched_proxies', [])
-                    
-                    # Check for unknown proxies
-                    def find_unknown(node):
-                        unknowns = []
-                        if node.get('type') == 'unknown':
-                            unknowns.append(node.get('text', '?'))
-                        for child in node.get('children', []):
-                            unknowns.extend(find_unknown(child))
-                        return unknowns
-                    
-                    unknowns = find_unknown(parsed_expr)
-                    if unknowns:
-                        db_response = f"❌ Proxies no encontrados: {', '.join(unknowns[:3])}"
-                        parsed_expr = None
-                finally:
-                    session.close()
-            
-            if parsed_expr or include_proxies:
-                result = create_venn_intersection(
-                    name=inter_name,
-                    operation=inter_op,
-                    include_proxies=include_proxies if include_proxies else None,
-                    logic_expression=parsed_expr
-                )
-                if result["success"]:
-                    db_response = f"✅ Intersección **{result['created']}** creada.\n"
-                    db_response += f"- Modo: {result['mode']}\n"
-                    if result.get('expression_display'):
-                        db_response += f"- Expresión: `{result['expression_display']}`\n"
-                else:
-                    db_response = f"❌ Error: {result['error']}"
-            elif not db_response:
-                db_response = "❌ Se requiere expresión lógica o lista de proxies."
+            # Use high-level function from db_venn_intersections
+            result = create_intersection_from_text(
+                name=inter_name,
+                expression_text=logic_expr_text,
+                include_proxies=include_proxies if include_proxies else None,
+                operation=inter_op,
+                user_input=user_input
+            )
+            db_response = format_intersection_created(result)
         
         elif action == "delete_venn_intersection":
             result = delete_venn_intersection(name=inter_name)
-            if result["success"]:
-                db_response = f"🗑️ Intersección **{result['deleted']}** eliminada."
-            else:
-                db_response = f"❌ Error: {result['error']}"
+            db_response = format_intersection_deleted(result)
         
         elif action == "update_venn_intersection":
             new_op = decision.get("new_operation")
@@ -411,10 +361,7 @@ def db_agent_node(state: "AgentState") -> "AgentState":
                 new_operation=new_op,
                 include_proxies=include_proxies
             )
-            if result["success"]:
-                db_response = f"✅ Intersección **{result['updated']}** actualizada."
-            else:
-                db_response = f"❌ Error: {result['error']}"
+            db_response = format_intersection_updated(result)
         
         # ==================== OTHER ====================
         
