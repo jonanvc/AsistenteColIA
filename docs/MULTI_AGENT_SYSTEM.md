@@ -1,4 +1,6 @@
-# Sistema Multi-Agente para Organizaciones de la Sociedad Civil en Colombia
+# 🚧 Work in Progress - Sistema Multi-Agente para Organizaciones de la Sociedad Civil en Colombia
+
+> **⚠️ NOTA**: Documento en actualización continua. Última revisión: Enero 2025.
 
 ## 🎯 Descripción General
 
@@ -69,8 +71,13 @@ graph TD
 - **Criterios**: Completitud, precisión, confiabilidad, utilidad
 - **Umbral**: Score >= 60 para aprobar
 
-### 6. **DB Query Agent (GPT-4o-mini)** ⭐ NUEVO
+### 6. **DB Query Agent (GPT-4o-mini)** ⭐ MODULAR v2.0
 - **Función**: Consulta y gestiona organizaciones directamente en la base de datos
+- **Arquitectura Modular**:
+  - `db_common.py`: Embeddings OpenAI y búsqueda semántica
+  - `db_organizations.py`: CRUD de organizaciones
+  - `db_venn_variables.py`: CRUD de variables/proxies
+  - `db_venn_intersections.py`: Intersecciones con expresiones anidadas
 - **Acciones disponibles**:
   - `search`: Buscar organizaciones por nombre, ubicación, ámbito, etc.
   - `get`: Obtener detalles de una organización específica
@@ -78,9 +85,10 @@ graph TD
   - `update`: Actualizar organización existente
   - `delete`: Eliminar organización
   - `list`: Listar todas las organizaciones registradas
+- **Búsqueda Semántica**: Usa embeddings para matching de nombres inexactos
 - **Uso**: Responde preguntas como "¿Tenemos registrada X?", "Lista las organizaciones de Bogotá"
 
-### 7. **Venn Agent (GPT-4o-mini)**
+### 7. **Venn Agent (GPT-4o-mini)** 🆕 MEJORADO
 - **Función**: Gestiona variables Venn, proxies, intersecciones y expresiones lógicas desde el chat
 - **Acciones disponibles**:
   - `list_venn_variables`: Listar todas las variables (resumen)
@@ -94,8 +102,10 @@ graph TD
   - `create_venn_intersection`: Crear intersección con expresión lógica
   - `update_venn_intersection`: Modificar intersección existente
   - `delete_venn_intersection`: Eliminar intersección
-- **Expresiones Lógicas**: Soporta combinaciones AND/OR con paréntesis
-  - Ejemplo: `"ProxyA" OR "ProxyB" OR ("ProxyC" AND "ProxyD")`
+- **Búsqueda Semántica**: Usa embeddings para encontrar variables/proxies por nombre aproximado
+- **Expresiones Lógicas Anidadas**: Soporta profundidad ILIMITADA con paréntesis
+  - Ejemplo simple: `"ProxyA" OR "ProxyB" OR ("ProxyC" AND "ProxyD")`
+  - Ejemplo anidado: `"A" AND ("B" OR ("C" AND ("D" OR "E")))`
 - **Uso**: Gestión completa de variables Venn y análisis booleano mediante lenguaje natural
 
 ### 8. Finalizador (GPT-4o-mini)

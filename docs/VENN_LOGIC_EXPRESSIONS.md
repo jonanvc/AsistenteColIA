@@ -1,4 +1,6 @@
-# Sistema de Expresiones Lógicas Venn
+# 🚧 Work in Progress - Sistema de Expresiones Lógicas Venn
+
+> **⚠️ NOTA**: Documento en actualización continua. Última revisión: Enero 2025.
 
 ## Descripción General
 
@@ -180,10 +182,28 @@ Los resultados de las intersecciones pueden exportarse como tablas de verdad:
 
 Este formato es directamente importable en herramientas de Análisis Cualitativo Comparativo (QCA) como Tosmana o fsQCA.
 
+## 🆕 Mejoras v2.0 - Parser Recursivo con Profundidad Ilimitada
+
+### Antes (v1.x)
+- Máximo 2 niveles de anidamiento
+- Pérdida de expresiones profundas
+
+### Ahora (v2.0)
+- **Profundidad ilimitada** mediante parser recursivo
+- Soporte completo para expresiones como:
+  ```
+  "A" AND ("B" OR ("C" AND ("D" OR ("E" AND "F"))))
+  ```
+
+### Búsqueda Semántica de Proxies
+- Usa embeddings OpenAI (text-embedding-3-small)
+- Encuentra proxies por nombre aproximado
+- Umbral de similitud configurable (default: 0.7)
+
 ## Limitaciones Conocidas
 
-1. **Profundidad máxima**: Expresiones con más de 5 niveles de anidamiento pueden afectar rendimiento
-2. **Búsqueda de proxies**: El parser busca por texto parcial, lo que puede generar ambigüedades
+1. ~~**Profundidad máxima**: Expresiones con más de 5 niveles de anidamiento pueden afectar rendimiento~~ ✅ RESUELTO
+2. ~~**Búsqueda de proxies**: El parser busca por texto parcial, lo que puede generar ambigüedades~~ ✅ RESUELTO con embeddings
 3. **Sin operador NOT**: Actualmente no se soporta negación lógica
 
 ## Extensiones Futuras

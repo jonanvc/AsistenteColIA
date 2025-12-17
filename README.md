@@ -1,4 +1,6 @@
-# Asistente de Recopilación y Análisis de Datos de Organizaciones de la Sociedad Civil Lideradas por Mujeres en Colombia
+# 🚧 Work in Progress - Asistente de Recopilación y Análisis de Datos de Organizaciones de la Sociedad Civil Lideradas por Mujeres en Colombia
+
+> **⚠️ NOTA**: Este proyecto está en desarrollo activo. La documentación y funcionalidades pueden cambiar.
 
 Sistema multi-agente para la gestión, scraping y visualización de datos de organizaciones de la sociedad civil lideradas por mujeres constructoras de paz en Colombia.
 
@@ -62,7 +64,11 @@ ProyectoFinal/
 │   │   │   ├── scraper.py       # Búsqueda web
 │   │   │   ├── classifier.py    # Clasificación de datos
 │   │   │   ├── evaluator.py     # Evaluación de calidad
-│   │   │   ├── db_agent.py      # Consultas a base de datos
+│   │   │   ├── db_agent.py      # 🆕 Orquestador modular de BD
+│   │   │   ├── db_common.py     # 🆕 Utilidades compartidas y embeddings
+│   │   │   ├── db_organizations.py  # 🆕 CRUD de organizaciones
+│   │   │   ├── db_venn_variables.py # 🆕 CRUD de variables Venn
+│   │   │   ├── db_venn_intersections.py # 🆕 Intersecciones con expresiones anidadas
 │   │   │   ├── venn_agent.py    # Gestión de variables Venn
 │   │   │   └── finalizer.py     # Generación de respuestas
 │   │   ├── api/           # Endpoints API
@@ -644,6 +650,24 @@ graph LR
 | [Informe Técnico](docs/INFORME_TECNICO.md) | Arquitectura, decisiones de diseño y desafíos del sistema |
 | [Sistema Multi-Agente](docs/MULTI_AGENT_SYSTEM.md) | Descripción detallada de los 8 agentes |
 | [Expresiones Lógicas Venn](docs/VENN_LOGIC_EXPRESSIONS.md) | Sistema de expresiones AND/OR para intersecciones |
+
+## 🆕 Arquitectura Modular del DB Agent (v2.0)
+
+El sistema de gestión de base de datos ha sido refactorizado en módulos especializados:
+
+| Módulo | Función |
+|--------|---------|
+| `db_common.py` | Utilidades compartidas, embeddings OpenAI para búsqueda semántica |
+| `db_organizations.py` | CRUD de organizaciones con búsqueda semántica |
+| `db_venn_variables.py` | CRUD de variables Venn y proxies con búsqueda semántica |
+| `db_venn_intersections.py` | Intersecciones con parser de expresiones anidadas ilimitadas |
+| `db_agent.py` | Orquestador que delega a los módulos especializados |
+
+### Mejoras Incluidas
+
+- **Búsqueda Semántica**: Embeddings OpenAI (text-embedding-3-small) para matching de nombres
+- **Expresiones Anidadas Ilimitadas**: Parser recursivo sin límite de profundidad
+- **Mejor Mantenibilidad**: Código dividido en módulos de ~200-800 líneas
 
 ## 📄 Licencia
 

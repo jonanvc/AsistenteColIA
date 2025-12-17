@@ -1,4 +1,6 @@
-# Informe Técnico: Agente de Análisis Booleano para Organizaciones de Paz
+# 🚧 Work in Progress - Informe Técnico: Agente de Análisis Booleano para Organizaciones de Paz
+
+> **⚠️ NOTA**: Documento en actualización continua. Última revisión: Enero 2025.
 
 ## 1. Introducción
 
@@ -59,6 +61,38 @@ La arquitectura modular adoptada permite mantener y evolucionar cada componente 
 El uso de proxies binarios con trazabilidad completa satisface los requisitos de transparencia y auditabilidad propios de la investigación en ciencias sociales. Los resultados pueden verificarse y reproducirse siguiendo la cadena de evidencia desde el valor final hasta el fragmento de texto original.
 
 Como extensiones futuras se plantea la incorporación de modelos de lenguaje para asistir en la detección semántica contextual, reduciendo la tasa de falsos positivos sin sacrificar la explicabilidad. También se considera la implementación de análisis temporales que permitan rastrear la evolución de los indicadores de cada organización a lo largo del tiempo, aprovechando el historial de scraping almacenado.
+
+## 7. Arquitectura Modular del DB Agent (v2.0)
+
+En la versión 2.0 del sistema, el agente de base de datos monolítico (db_agent.py, ~3200 líneas) fue refactorizado en módulos especializados para mejorar la mantenibilidad y escalabilidad:
+
+### Módulos Implementados
+
+| Módulo | Responsabilidad | Líneas aprox. |
+|--------|-----------------|---------------|
+| `db_common.py` | Embeddings, similitud coseno, búsqueda semántica | ~200 |
+| `db_organizations.py` | CRUD organizaciones con búsqueda semántica | ~500 |
+| `db_venn_variables.py` | CRUD variables Venn y proxies | ~350 |
+| `db_venn_intersections.py` | Intersecciones con parser recursivo | ~800 |
+| `db_agent.py` | Orquestador que delega a módulos | ~500 |
+
+### Búsqueda Semántica con Embeddings
+
+Se implementó búsqueda semántica utilizando embeddings de OpenAI (modelo text-embedding-3-small) para resolver el problema de matching inexacto de nombres. Cuando el usuario solicita una organización o variable por nombre, el sistema:
+
+1. Genera embedding del término de búsqueda
+2. Calcula similitud coseno contra todos los nombres candidatos
+3. Retorna el mejor match si supera el umbral (0.7 por defecto)
+
+### Parser de Expresiones Anidadas Ilimitadas
+
+El nuevo parser soporta expresiones booleanas con profundidad ilimitada:
+
+```
+"A" AND ("B" OR ("C" AND ("D" OR ("E" AND "F"))))
+```
+
+La implementación utiliza recursión para procesar paréntesis anidados, generando un árbol JSON que el evaluador recorre de forma también recursiva.
 
 ---
 
